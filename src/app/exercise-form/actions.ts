@@ -76,7 +76,7 @@ async function saveTravelDataToAPI(
 }
 
 export async function submitTravelData(
-  prevState: FormState,
+  _: FormState,
   formData: FormData
 ): Promise<FormState> {
   try {
@@ -141,61 +141,61 @@ export async function submitTravelData(
 }
 
 // Simplified server action that takes individual parameters instead of FormData
-export async function submitTravelDataBasic(data: {
-  firstName: string;
-  lastName: string;
-  birthdate: string;
-  passport: string;
-  originCity: string;
-  seatPreference: string;
-}): Promise<FormState> {
-  try {
-    // Validate the data
-    const result = travelDataSchema.safeParse(data);
+// export async function submitTravelDataBasic(data: {
+//   firstName: string;
+//   lastName: string;
+//   birthdate: string;
+//   passport: string;
+//   originCity: string;
+//   seatPreference: string;
+// }): Promise<FormState> {
+//   try {
+//     // Validate the data
+//     const result = travelDataSchema.safeParse(data);
 
-    if (!result.success) {
-      const errors: Record<string, string> = {};
-      result.error.errors.forEach((error) => {
-        if (error.path[0]) {
-          errors[error.path[0] as string] = error.message;
-        }
-      });
+//     if (!result.success) {
+//       const errors: Record<string, string> = {};
+//       result.error.errors.forEach((error) => {
+//         if (error.path[0]) {
+//           errors[error.path[0] as string] = error.message;
+//         }
+//       });
 
-      return {
-        status: 'error',
-        errors,
-        data: null,
-        submittedData: data, // Preserve the submitted data for form repopulation
-      };
-    }
+//       return {
+//         status: 'error',
+//         errors,
+//         data: null,
+//         submittedData: data, // Preserve the submitted data for form repopulation
+//       };
+//     }
 
-    // Call mock API
-    const apiResult = await saveTravelDataToAPI(result.data);
+//     // Call mock API
+//     const apiResult = await saveTravelDataToAPI(result.data);
 
-    if (!apiResult.success) {
-      return {
-        status: 'error',
-        errors: { general: apiResult.error || 'Failed to save travel data' },
-        data: null,
-        submittedData: data, // Preserve data even on API errors
-      };
-    }
+//     if (!apiResult.success) {
+//       return {
+//         status: 'error',
+//         errors: { general: apiResult.error || 'Failed to save travel data' },
+//         data: null,
+//         submittedData: data, // Preserve data even on API errors
+//       };
+//     }
 
-    // Success case
-    return {
-      status: 'success',
-      errors: {},
-      data: result.data,
-      submittedData: undefined, // Clear submitted data on success
-    };
-  } catch (error) {
-    console.error('Error submitting travel data:', error);
+//     // Success case
+//     return {
+//       status: 'success',
+//       errors: {},
+//       data: result.data,
+//       submittedData: undefined, // Clear submitted data on success
+//     };
+//   } catch (error) {
+//     console.error('Error submitting travel data:', error);
 
-    return {
-      status: 'error',
-      errors: { general: 'An unexpected error occurred. Please try again.' },
-      data: null,
-      submittedData: undefined,
-    };
-  }
-}
+//     return {
+//       status: 'error',
+//       errors: { general: 'An unexpected error occurred. Please try again.' },
+//       data: null,
+//       submittedData: undefined,
+//     };
+//   }
+// }
