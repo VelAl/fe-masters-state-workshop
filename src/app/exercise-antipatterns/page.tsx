@@ -1,16 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
@@ -22,15 +16,10 @@ function FilteredDestinations() {
     { id: 3, name: 'New York', country: 'USA', rating: 4.3 },
   ]);
   const [filterRating, setFilterRating] = useState(4.5);
-  const [filteredDestinations, setFilteredDestinations] = useState<
-    typeof destinations
-  >([]);
 
-  useEffect(() => {
-    setFilteredDestinations(
-      destinations.filter((dest) => dest.rating >= filterRating)
-    );
-  }, [destinations, filterRating]);
+  const filteredDestinations = destinations.filter(
+    (dest) => dest.rating >= filterRating
+  );
 
   return (
     <Card>
@@ -76,11 +65,7 @@ function TripSummary() {
     { id: 2, name: 'Hotel', cost: 300 },
     { id: 3, name: 'Activities', cost: 200 },
   ]);
-  const [totalCost, setTotalCost] = useState(0);
-
-  useEffect(() => {
-    setTotalCost(tripItems.reduce((sum, item) => sum + item.cost, 0));
-  }, [tripItems]);
+  const totalCost = tripItems.reduce((sum, item) => sum + item.cost, 0);
 
   return (
     <Card>
@@ -112,16 +97,13 @@ function TripSummary() {
 // Example 3: Available Dates
 function AvailableDates() {
   const [bookedDates] = useState(['2024-06-01', '2024-06-02', '2024-06-03']);
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
-  useEffect(() => {
-    const allDates = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date('2024-06-01');
-      date.setDate(date.getDate() + i);
-      return date.toISOString().split('T')[0];
-    });
-    setAvailableDates(allDates.filter((date) => !bookedDates.includes(date)));
-  }, [bookedDates]);
+  const allDates = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date('2024-06-01');
+    date.setDate(date.getDate() + i);
+    return date.toISOString().split('T')[0];
+  });
+  const availableDates = allDates.filter((date) => !bookedDates.includes(date));
 
   return (
     <Card>
@@ -154,39 +136,32 @@ function AvailableDates() {
 function TripStatus() {
   const [trip] = useState({
     startDate: '2024-06-01',
-    endDate: '2024-06-05',
+    endDate: '2025-07-07',
     isPaid: true,
     isConfirmed: true,
   });
-  const [status, setStatus] = useState('');
 
-  useEffect(() => {
-    const today = new Date();
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
+  const today = new Date();
+  const start = new Date(trip.startDate);
+  const end = new Date(trip.endDate);
 
-    if (!trip.isPaid) setStatus('Payment Pending');
-    else if (!trip.isConfirmed) setStatus('Awaiting Confirmation');
-    else if (today < start) setStatus('Upcoming');
-    else if (today >= start && today <= end) setStatus('In Progress');
-    else setStatus('Completed');
-  }, [trip]);
+  const status = !trip.isPaid
+    ? 'Payment Pending'
+    : !trip.isConfirmed
+    ? 'Awaiting Confirmation'
+    : today < start
+    ? 'Upcoming'
+    : today >= start && today <= end
+    ? 'In Progress'
+    : 'Completed';
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'Payment Pending':
-      case 'Awaiting Confirmation':
-        return 'destructive' as const;
-      case 'In Progress':
-        return 'default' as const;
-      case 'Upcoming':
-        return 'secondary' as const;
-      case 'Completed':
-        return 'outline' as const;
-      default:
-        return 'secondary' as const;
-    }
-  };
+  const statusVars = {
+    'Payment Pending': 'destructive',
+    'Awaiting Confirmation': 'destructive',
+    'In Progress': 'default',
+    Upcoming: 'secondary',
+    Completed: 'outline',
+  } as const;
 
   return (
     <Card>
@@ -196,7 +171,10 @@ function TripStatus() {
       <CardContent>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Status:</span>
-          <Badge variant={getStatusVariant(status)} className="text-sm">
+          <Badge
+            variant={statusVars[status] || 'secondary'}
+            className="text-sm"
+          >
             {status}
           </Badge>
         </div>
@@ -213,15 +191,11 @@ function SearchResults() {
     { id: 3, name: 'City Hotel', price: 180, rating: 4.7 },
   ]);
   const [sortBy, setSortBy] = useState('price');
-  const [sortedResults, setSortedResults] = useState<typeof searchResults>([]);
 
-  useEffect(() => {
-    const sorted = [...searchResults].sort((a, b) => {
-      if (sortBy === 'price') return a.price - b.price;
-      return b.rating - a.rating;
-    });
-    setSortedResults(sorted);
-  }, [searchResults, sortBy]);
+  const sortedResults = [...searchResults].sort((a, b) => {
+    if (sortBy === 'price') return a.price - b.price;
+    return b.rating - a.rating;
+  });
 
   return (
     <Card>
@@ -269,37 +243,37 @@ function SearchResults() {
 // Example 6: Booking Timer
 function BookingTimer() {
   const [timeLeft, setTimeLeft] = useState(300);
-  const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
+  const timerIdRef = useRef<NodeJS.Timeout | null>(null);
 
   const startTimer = () => {
-    if (timerId) clearInterval(timerId);
+    if (timerIdRef.current) clearInterval(timerIdRef.current);
 
     const id = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(id);
-          setTimerId(null); // ❌ Unnecessary re-render
+          timerIdRef.current = null;
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    setTimerId(id); // ❌ Unnecessary re-render
+    timerIdRef.current = id;
   };
 
   const stopTimer = () => {
-    if (timerId) {
-      clearInterval(timerId);
-      setTimerId(null); // ❌ Unnecessary re-render
+    if (timerIdRef.current) {
+      clearInterval(timerIdRef.current);
+      timerIdRef.current = null;
     }
   };
 
   useEffect(() => {
     return () => {
-      if (timerId) clearInterval(timerId);
+      if (timerIdRef.current) clearInterval(timerIdRef.current);
     };
-  }, [timerId]); // ❌ Effect runs every time timerId changes
+  }, []);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -342,15 +316,16 @@ function HotelGallery() {
     'hotel-pool.jpg',
     'hotel-restaurant.jpg',
   ]);
-  const [lastScrollPosition, setLastScrollPosition] = useState(0);
+  const lastScrollPositionRef = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
       const currentPosition = window.scrollY;
 
-      setLastScrollPosition(currentPosition);
+      // setLastScrollPosition(currentPosition);
+      lastScrollPositionRef.current = currentPosition;
 
-      if (currentPosition > lastScrollPosition) {
+      if (currentPosition > lastScrollPositionRef.current) {
         console.log('Scrolling down');
       } else {
         console.log('Scrolling up');
@@ -359,16 +334,12 @@ function HotelGallery() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollPosition]); // ❌ Effect re-runs on every scroll
+  }, []);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Hotel Gallery</CardTitle>
-        <CardDescription>
-          ❌ Problem: Using useState for scroll position when useRef should be
-          used (tracking only)
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4 max-h-64 overflow-y-auto">
@@ -380,9 +351,6 @@ function HotelGallery() {
               <span className="text-sm text-muted-foreground">{image}</span>
             </div>
           ))}
-        </div>
-        <div className="mt-4 text-xs text-muted-foreground">
-          Debug: Last scroll position: {lastScrollPosition}px
         </div>
       </CardContent>
     </Card>
@@ -483,12 +451,11 @@ function HotelSelection() {
       amenities: ['WiFi', 'Pool', 'Beach Access'],
     },
   ]);
-  const [selectedHotel, setSelectedHotel] = useState<(typeof hotels)[0] | null>(
-    null
-  );
+  const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  const selectedHotel = hotels.find(({ id }) => id === selectedHotelId);
 
-  const handleHotelSelect = (hotel: (typeof hotels)[0]) => {
-    setSelectedHotel(hotel);
+  const handleHotelSelect = (hotelId: string) => {
+    setSelectedHotelId(hotelId);
   };
 
   return (
@@ -502,11 +469,11 @@ function HotelSelection() {
             <div
               key={hotel.id}
               className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                selectedHotel?.id === hotel.id
+                selectedHotelId === hotel.id
                   ? 'border-primary bg-primary/5'
                   : 'hover:bg-accent'
               }`}
-              onClick={() => handleHotelSelect(hotel)}
+              onClick={() => handleHotelSelect(hotel.id)}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -542,12 +509,6 @@ function HotelSelection() {
                 ))}
               </div>
             </div>
-            <div className="mt-3">
-              <Badge variant="destructive" className="text-xs">
-                Storing entire object with {Object.keys(selectedHotel).length}{' '}
-                properties
-              </Badge>
-            </div>
           </div>
         )}
       </CardContent>
@@ -568,18 +529,6 @@ function TravelPreferences() {
     },
   });
 
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userBudget, setUserBudget] = useState('');
-  const [userTravelStyle, setUserTravelStyle] = useState('');
-
-  useEffect(() => {
-    setUserName(userProfile.name);
-    setUserEmail(userProfile.email);
-    setUserBudget(userProfile.preferences.budget);
-    setUserTravelStyle(userProfile.preferences.travelStyle);
-  }, [userProfile]);
-
   return (
     <Card>
       <CardHeader>
@@ -588,9 +537,7 @@ function TravelPreferences() {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="text-sm font-medium">
-              Profile Data (Original)
-            </Label>
+            <Label className="text-sm font-medium">Profile Data</Label>
             <div className="mt-1 space-y-1 text-sm">
               <p>
                 <strong>Name:</strong> {userProfile.name}
@@ -606,35 +553,6 @@ function TravelPreferences() {
               </p>
             </div>
           </div>
-
-          <div>
-            <Label className="text-sm font-medium">
-              Redundant State (Copy)
-            </Label>
-            <div className="mt-1 space-y-1 text-sm">
-              <p>
-                <strong>Name:</strong> {userName}
-              </p>
-              <p>
-                <strong>Email:</strong> {userEmail}
-              </p>
-              <p>
-                <strong>Budget:</strong> {userBudget}
-              </p>
-              <p>
-                <strong>Style:</strong> {userTravelStyle}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-          <Badge variant="destructive" className="text-xs">
-            4 unnecessary state variables
-          </Badge>
-          <Badge variant="destructive" className="text-xs">
-            4 unnecessary useEffect calls
-          </Badge>
         </div>
       </CardContent>
     </Card>
@@ -704,7 +622,7 @@ function BookingSummary() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-2">Redundant Formatted Data</h4>
+            <h4 className="font-semibold mb-2">Formatted Data</h4>
             <div className="text-sm space-y-1">
               <p>Departure: {formattedDepartureDate}</p>
               <p>Return: {formattedReturnDate}</p>
