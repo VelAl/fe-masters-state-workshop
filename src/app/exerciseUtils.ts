@@ -5,7 +5,7 @@ export interface FlightOption {
   duration: string;
 }
 
-export async function getFlightOptions(query: {
+export async function getFlightOptions(_query: {
   destination: string;
   departure: string;
   arrival: string;
