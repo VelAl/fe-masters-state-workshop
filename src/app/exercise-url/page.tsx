@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useState } from 'react';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import { parseAsBoolean, useQueryState } from 'nuqs';
 
 interface Layover {
   city: string;
@@ -38,6 +39,7 @@ function SearchResults({
   const [showDirectOnly, setShowDirectOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'duration'>('price');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const totalPrice = selectedFlight ? selectedFlight.price * passengers : 0;
 
   const filteredFlights = flightOptions
@@ -173,10 +175,13 @@ function BookingForm({
   passengers: number;
   setPassengers: (value: number) => void;
 }) {
-  const [destination, setDestination] = useState('');
-  const [departure, setDeparture] = useState('');
-  const [arrival, setArrival] = useState('');
-  const [isOneWay, setIsOneWay] = useState(false);
+  const [destination, setDestination] = useQueryState('destination');
+  const [departure, setDeparture] = useQueryState('departure');
+  const [arrival, setArrival] = useQueryState('arrival');
+  const [isOneWay, setIsOneWay] = useQueryState(
+    'isOneWay',
+    parseAsBoolean.withDefault(false)
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,7 +193,7 @@ function BookingForm({
       <div className="flex items-center space-x-2 mb-4">
         <Switch
           id="one-way"
-          checked={isOneWay}
+          checked={!!isOneWay}
           onCheckedChange={(checked) => setIsOneWay(checked)}
         />
         <Label htmlFor="one-way">One-way flight</Label>
@@ -201,7 +206,7 @@ function BookingForm({
         <Input
           type="text"
           id="destination"
-          value={destination}
+          value={destination || ''}
           onChange={(e) => setDestination(e.target.value)}
           required
         />
@@ -214,7 +219,7 @@ function BookingForm({
         <Input
           type="date"
           id="departure"
-          value={departure}
+          value={departure || ''}
           onChange={(e) => setDeparture(e.target.value)}
           required
         />
@@ -228,7 +233,7 @@ function BookingForm({
           <Input
             type="date"
             id="arrival"
-            value={arrival}
+            value={arrival || ''}
             onChange={(e) => setArrival(e.target.value)}
             required
           />
