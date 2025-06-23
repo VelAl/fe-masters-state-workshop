@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LoadingSkeleton } from './LoadingSkeleton';
-import { parseAsBoolean, useQueryState } from 'nuqs';
+import { parseAsBoolean, parseAsStringEnum, useQueryState } from 'nuqs';
 
 interface Layover {
   city: string;
@@ -36,9 +36,20 @@ function SearchResults({
   const [selectedFlight, setSelectedFlight] = useState<FlightOption | null>(
     null
   );
-  const [showDirectOnly, setShowDirectOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'price' | 'duration'>('price');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const [showDirectOnly, setShowDirectOnly] = useQueryState(
+    'showDirectOnly',
+    parseAsBoolean.withDefault(false)
+  );
+
+  const [sortBy, setSortBy] = useQueryState(
+    'sortBy',
+    parseAsStringEnum(['price', 'duration']).withDefault('price')
+  );
+  const [sortOrder, setSortOrder] = useQueryState(
+    'sortOrder',
+    parseAsStringEnum(['asc', 'desc']).withDefault('asc')
+  );
 
   const totalPrice = selectedFlight ? selectedFlight.price * passengers : 0;
 
@@ -266,8 +277,77 @@ export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isError, setIsError] = useState(false);
   const [flightOptions, setFlightOptions] = useState<FlightOption[]>([]);
-  const [view, setView] = useState<'search' | 'results'>('search');
-  const [passengers, setPassengers] = useState(1);
+  const [destination] = useQueryState('destination');
+  const [departure] = useQueryState('departure');
+
+  const [view, setView] = useQueryState('view', {
+    parse: (value) => (value === 'results' ? 'results' : 'search'),
+    serialize: (value) => value,
+    defaultValue: 'search',
+  });
+  const [passengers, setPassengers] = useQueryState('passengers', {
+    parse: (value) => parseInt(value) || 1,
+    defaultValue: 1,
+    serialize: (value) => value.toString(),
+  });
+
+  // Add effect to load search results when URL has search params
+  useEffect(() => {
+    const loadSearchResults = async () => {
+      const hasSearchParams = destination && departure;
+
+      if (hasSearchParams && view === 'results') {
+        setIsSubmitting(true);
+        try {
+          // Simulate API call
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          // Mock flight options with layovers
+          const mockFlights: FlightOption[] = [
+            {
+              id: '1',
+              airline: 'Sky Airways',
+              price: 299,
+              duration: '2h 30m',
+              layovers: [],
+            },
+            {
+              id: '2',
+              airline: 'Ocean Air',
+              price: 349,
+              duration: '2h 45m',
+              layovers: [
+                { city: 'Chicago', duration: '1h 15m' },
+                { city: 'Denver', duration: '45m' },
+              ],
+            },
+            {
+              id: '3',
+              airline: 'Mountain Express',
+              price: 279,
+              duration: '3h 15m',
+              layovers: [{ city: 'Phoenix', duration: '1h 30m' }],
+            },
+            {
+              id: '4',
+              airline: 'Pacific Airlines',
+              price: 329,
+              duration: '2h 15m',
+              layovers: [],
+            },
+          ];
+
+          setFlightOptions(mockFlights);
+        } catch {
+          setIsError(true);
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    };
+
+    loadSearchResults();
+  }, [view, destination, departure]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
