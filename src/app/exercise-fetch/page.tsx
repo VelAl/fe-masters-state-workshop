@@ -8,6 +8,11 @@ import { createContext, use, useReducer, useEffect, useState } from 'react';
 
 import { fetchHotels } from './fetchHotels';
 import { fetchFlights } from './fetchFlights';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 
 // Types
 enum Step {
@@ -275,34 +280,20 @@ function FlightSearchResults() {
   const { state, dispatch } = use(BookingContext)!;
   const { selectedFlight, flightSearch } = state;
 
-  const [flights, setFlights] = useState<FlightOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadFlights = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const flightData = await fetchFlights(flightSearch);
-        setFlights(flightData);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch flights'
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadFlights();
-  }, [flightSearch]);
+  const {
+    isPending,
+    error,
+    data: flights,
+  } = useQuery({
+    queryKey: ['flights', flightSearch],
+    queryFn: () => fetchFlights(flightSearch),
+  });
 
   const handleSelectFlight = (flight: FlightOption) => {
     dispatch({ type: 'flightSelected', flight: flight });
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center h-48">
         <div className="text-gray-500">Loading flights...</div>
@@ -313,7 +304,9 @@ function FlightSearchResults() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500">
+          {error.name}: {error.message}
+        </div>
       </div>
     );
   }
@@ -452,32 +445,20 @@ function HotelSearchResults() {
   const { state, dispatch } = use(BookingContext)!;
   const { selectedHotel, hotelSearch } = state;
 
-  const [hotels, setHotels] = useState<HotelOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadHotels = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const hotelData = await fetchHotels(hotelSearch);
-        setHotels(hotelData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch hotels');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadHotels();
-  }, [hotelSearch]);
+  const {
+    isPending,
+    error,
+    data: hotels,
+  } = useQuery({
+    queryKey: ['hotels', hotelSearch],
+    queryFn: () => fetchHotels(hotelSearch),
+  });
 
   const handleSelectHotel = (hotel: HotelOption) => {
     dispatch({ type: 'hotelSelected', payload: hotel });
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center h-48">
         <div className="text-gray-500">Loading hotels...</div>
@@ -488,7 +469,9 @@ function HotelSearchResults() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500">
+          {error.name}: {error.message}
+        </div>
       </div>
     );
   }
@@ -625,57 +608,48 @@ function BookingConfirmation() {
 }
 
 // Main Component
-function BookingFlow() {
-  const initialState: BookingState = {
-    currentStep: Step.FLIGHT_SEARCH,
-    flightSearch: {
-      destination: '',
-      departure: '',
-      arrival: '',
-      passengers: 1,
-      isOneWay: false,
-    },
-    selectedFlight: null,
-    hotelSearch: {
-      checkIn: '',
-      checkOut: '',
-      guests: 1,
-      roomType: 'standard',
-    },
-    selectedHotel: null,
-  };
+const initialState: BookingState = {
+  currentStep: Step.FLIGHT_SEARCH,
+  flightSearch: {
+    destination: '',
+    departure: '',
+    arrival: '',
+    passengers: 1,
+    isOneWay: false,
+  },
+  selectedFlight: null,
+  hotelSearch: {
+    checkIn: '',
+    checkOut: '',
+    guests: 1,
+    roomType: 'standard',
+  },
+  selectedHotel: null,
+};
+const pageRoutes = {
+  [Step.FLIGHT_SEARCH]: <FlightBookingForm />,
+  [Step.FLIGHT_RESULTS]: <FlightSearchResults />,
+  [Step.HOTEL_SEARCH]: <HotelBookingForm />,
+  [Step.HOTEL_RESULTS]: <HotelSearchResults />,
+  [Step.REVIEW]: <BookingReview />,
+  [Step.CONFIRMATION]: <BookingConfirmation />,
+} as const;
 
-  const [state, dispatch] = useReducer(bookingReducer, initialState);
-
-  const renderStep = () => {
-    switch (state.currentStep) {
-      case Step.FLIGHT_SEARCH:
-        return <FlightBookingForm />;
-      case Step.FLIGHT_RESULTS:
-        return <FlightSearchResults />;
-      case Step.HOTEL_SEARCH:
-        return <HotelBookingForm />;
-      case Step.HOTEL_RESULTS:
-        return <HotelSearchResults />;
-      case Step.REVIEW:
-        return <BookingReview />;
-      case Step.CONFIRMATION:
-        return <BookingConfirmation />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <BookingContext.Provider value={{ state, dispatch }}>
-      <div className="w-full max-w-2xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Flight & Hotel Booking</h1>
-        {renderStep()}
-      </div>
-    </BookingContext.Provider>
-  );
-}
+const queryClient = new QueryClient();
 
 export default function Page() {
-  return <BookingFlow />;
+  const [state, dispatch] = useReducer(
+    bookingReducer,
+    structuredClone(initialState)
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BookingContext.Provider value={{ state, dispatch }}>
+        <div className="w-full max-w-2xl mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-6">Flight & Hotel Booking</h1>
+          {pageRoutes[state.currentStep] || null}
+        </div>
+      </BookingContext.Provider>
+    </QueryClientProvider>
+  );
 }
